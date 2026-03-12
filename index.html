@@ -199,6 +199,11 @@ values.forEach(v=>{
 
 // mettre la valeur initiale sur l'option vide
 select.value = "";
+// recalcul quand on change la valeur
+select.onchange = () => {
+  updateTotals(playerIndex);
+  checkGameEnd();
+};
 
 return select;
 }
