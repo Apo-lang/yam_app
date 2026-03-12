@@ -147,6 +147,74 @@ renderTable();
 
 }
 
+function createSelect(combo, playerIndex){
+
+let select=document.createElement("select");
+
+let values=[];
+
+// section haute
+if(combo==="As"){
+values=[0,1,2,3,4,5,6];
+}
+
+else if(combo==="Deux"){
+for(let i=0;i<=10;i+=2) values.push(i);
+}
+
+else if(combo==="Trois"){
+for(let i=0;i<=15;i+=3) values.push(i);
+}
+
+else if(combo==="Quatre"){
+for(let i=0;i<=20;i+=4) values.push(i);
+}
+
+else if(combo==="Cinq"){
+for(let i=0;i<=25;i+=5) values.push(i);
+}
+
+else if(combo==="Six"){
+for(let i=0;i<=30;i+=6) values.push(i);
+}
+
+// brelan / carré / chance
+else if(combo==="Brelan" || combo==="Carré" || combo==="Chance"){
+for(let i=0;i<=30;i++) values.push(i);
+}
+
+// scores fixes
+else if(fixedScores[combo] !== undefined){
+
+let option=document.createElement("option");
+option.value=fixedScores[combo];
+option.textContent=fixedScores[combo];
+select.appendChild(option);
+
+select.value=fixedScores[combo];
+
+return select;
+}
+
+// remplir la liste
+values.forEach(v=>{
+let option=document.createElement("option");
+option.value=v;
+option.textContent=v;
+select.appendChild(option);
+});
+
+select.value="";
+
+select.onchange=()=>{
+updateTotals(playerIndex);
+checkGameEnd();
+};
+
+return select;
+
+}
+
 
 function renderTable(){
 
@@ -175,7 +243,9 @@ players.forEach((p,i)=>{
 
 let cell=document.createElement("td");
 
-cell.onclick=()=>toggleCell(cell,i,combo);
+let select=createSelect(combo,i);
+
+cell.appendChild(select);
 
 row.appendChild(cell);
 
@@ -275,48 +345,6 @@ totalRow.appendChild(td);
 }
 
 
-function toggleCell(cell,playerIndex,combo){
-
-let currentValue = cell.textContent;
-let value;
-
-// si score fixe
-if(fixedScores[combo] !== undefined){
-
-// si la cellule est vide -> score automatique
-if(currentValue === ""){
-value = fixedScores[combo];
-}else{
-// sinon permettre modification
-value = prompt("Modifier le score :", currentValue);
-if(value===null) return;
-value = parseInt(value);
-if(isNaN(value)) return;
-}
-
-}else{
-
-value = prompt("Score obtenu :", currentValue);
-
-if(value===null) return;
-
-value=parseInt(value);
-
-if(isNaN(value)) return;
-
-}
-
-cell.textContent=value;
-
-cell.classList.add("used");
-
-updateTotals(playerIndex);
-
-checkGameEnd();
-
-}
-
-
 function updateTotals(playerIndex){
 
 let col=playerIndex+1;
@@ -331,7 +359,8 @@ let grandTotal=0;
 
 for(let i=0;i<6;i++){
 
-let v=parseInt(rows[i].children[col].textContent);
+let select=rows[i].children[col].querySelector("select");
+let v=select ? parseInt(select.value) : NaN;
 
 if(!isNaN(v)) upperTotal+=v;
 
@@ -353,7 +382,9 @@ rows.forEach((row,index)=>{
 
 if(index===6||index===7) return;
 
-let v=parseInt(row.children[col].textContent);
+let select=row.children[col].querySelector("select");
+
+let v = select ? parseInt(select.value) : NaN;
 
 if(!isNaN(v)) grandTotal+=v;
 
