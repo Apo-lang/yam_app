@@ -153,7 +153,6 @@ let select=document.createElement("select");
 
 let values=[];
 
-// section haute
 if(combo==="As"){
 values=[0,1,2,3,4,5,6];
 }
@@ -178,42 +177,33 @@ else if(combo==="Six"){
 for(let i=0;i<=30;i+=6) values.push(i);
 }
 
-// brelan / carré / chance
 else if(combo==="Brelan" || combo==="Carré" || combo==="Chance"){
 for(let i=0;i<=30;i++) values.push(i);
 }
 
-// scores fixes
-else if(fixedScores[combo] !== undefined){
 
-let option=document.createElement("option");
-option.value=fixedScores[combo];
-option.textContent=fixedScores[combo];
-select.appendChild(option);
-
-select.value=fixedScores[combo];
-
-return select;
-}
 
 // remplir la liste
+let defaultOption = document.createElement("option");
+defaultOption.value = "";
+defaultOption.textContent = "--";
+select.appendChild(defaultOption);
+
+// Puis toutes les valeurs
 values.forEach(v=>{
-let option=document.createElement("option");
-option.value=v;
-option.textContent=v;
-select.appendChild(option);
+  let option=document.createElement("option");
+  option.value=v;
+  option.textContent=v;
+  select.appendChild(option);
 });
 
-select.value="";
-
-select.onchange=()=>{
-updateTotals(playerIndex);
-checkGameEnd();
-};
+// mettre la valeur initiale sur l'option vide
+select.value = "";
 
 return select;
-
 }
+
+
 
 
 function renderTable(){
@@ -243,9 +233,24 @@ players.forEach((p,i)=>{
 
 let cell=document.createElement("td");
 
-let select=createSelect(combo,i);
+// combinaisons avec score fixe (clic)
+if(fixedScores[combo] !== undefined){
 
+cell.onclick=()=>{
+cell.textContent=fixedScores[combo];
+cell.classList.add("used");
+updateTotals(i);
+checkGameEnd();
+};
+
+}
+else{
+
+// combinaisons avec liste déroulante
+let select=createSelect(combo,i);
 cell.appendChild(select);
+
+}
 
 row.appendChild(cell);
 
@@ -316,7 +321,26 @@ players.forEach((p,i)=>{
 
 let cell=document.createElement("td");
 
-cell.onclick=()=>toggleCell(cell,i,combo);
+// scores automatiques
+if(fixedScores[combo] !== undefined){
+
+cell.onclick = () => {
+  if(cell.dataset.played) return; // bloque si déjà joué
+  cell.textContent = fixedScores[combo];
+  cell.dataset.played = "true";  // <- marque la cellule comme jouée
+  cell.classList.add("used");
+  updateTotals(i);
+  checkGameEnd();
+};
+
+}
+else{
+
+// liste déroulante pour brelan, carré, chance
+let select=createSelect(combo,i);
+cell.appendChild(select);
+
+}
 
 row.appendChild(cell);
 
@@ -359,21 +383,27 @@ let grandTotal=0;
 
 for(let i=0;i<6;i++){
 
-let select=rows[i].children[col].querySelector("select");
-let v=select ? parseInt(select.value) : NaN;
+let cell = rows[i].children[col];
+let select = cell.querySelector("select");
 
-if(!isNaN(v)) upperTotal+=v;
+let v = 0;
+
+if(select && select.value !== ""){
+v = parseInt(select.value);
+}
+
+upperTotal += v;
 
 }
 
-rows[6].children[col].textContent=upperTotal;
+rows[6].children[col].textContent = upperTotal;
 
 
 // bonus
 
-let bonus=upperTotal>=63?35:0;
+let bonus = upperTotal >= 63 ? 35 : 0;
 
-rows[7].children[col].textContent=bonus;
+rows[7].children[col].textContent = bonus;
 
 
 // total général
@@ -382,11 +412,18 @@ rows.forEach((row,index)=>{
 
 if(index===6||index===7) return;
 
-let select=row.children[col].querySelector("select");
+let cell = row.children[col];
+let select = cell.querySelector("select");
 
-let v = select ? parseInt(select.value) : NaN;
+let v;
 
-if(!isNaN(v)) grandTotal+=v;
+if(select){
+v = parseInt(select.value);
+}else{
+v = parseInt(cell.textContent);
+}
+
+if(!isNaN(v)) grandTotal += v;
 
 });
 
@@ -396,65 +433,65 @@ document.getElementById("totals").children[col].textContent=grandTotal;
 
 }
 
-function checkGameEnd(){
+function checkGameEnd() {
+  let rows = document.querySelectorAll("#scoreBody tr");
 
-let rows=document.querySelectorAll("#scoreBody tr");
-let playableRows=[];
+  // lignes jouables (on ignore sous-total et bonus)
+  let playableRows = Array.from(rows).filter((row, index) => index !== 6 && index !== 7);
 
-// lignes jouables (on ignore sous total et bonus)
-rows.forEach((row,index)=>{
-if(index!==6 && index!==7){
-playableRows.push(row);
+  let allFilled = true;
+
+  playableRows.forEach(row => {
+    for (let i = 1; i < row.children.length; i++) {
+      let cell = row.children[i];
+      let select = cell.querySelector("select");
+
+      if (select) {
+        // cellule avec menu déroulant
+        if (select.value === "") {
+          allFilled = false;
+          break;
+        }
+      } else {
+        // cellule automatique (Full, Yams, Suites)
+        if (!cell.dataset.played){
+  allFilled = false;
+        }
+      }
+    }
+    if (!allFilled) return; // si une cellule n'est pas remplie, stop
+  });
+
+  if (!allFilled) return; // aucune action si pas toutes les cellules remplies
+
+  // récupérer les scores finaux
+  let totals = document.querySelectorAll("#totals td");
+
+  let bestScore = -1;
+  let winner = "";
+  let tie = false;
+
+  players.forEach((player, i) => {
+    let score = parseInt(totals[i + 1].textContent);
+
+    if (score > bestScore) {
+      bestScore = score;
+      winner = player.name;
+      tie = false;
+    } else if (score === bestScore) {
+      tie = true;
+    }
+  });
+
+  setTimeout(() => {
+    if (tie) {
+      alert("Égalité ! Plusieurs joueurs ont " + bestScore + " points !");
+    } else {
+      alert("🏆 Le gagnant est " + winner + " avec " + bestScore + " points !");
+    }
+  }, 200);
 }
-});
 
-let allFilled=true;
-
-playableRows.forEach(row=>{
-for(let i=1;i<row.children.length;i++){
-if(row.children[i].textContent===""){
-allFilled=false;
-}
-}
-});
-
-if(!allFilled) return;
-
-
-// récupérer les scores finaux
-
-let totals=document.querySelectorAll("#totals td");
-
-let bestScore=-1;
-let winner="";
-let tie=false;
-
-players.forEach((player,i)=>{
-
-let score=parseInt(totals[i+1].textContent);
-
-if(score>bestScore){
-bestScore=score;
-winner=player.name;
-tie=false;
-}
-else if(score===bestScore){
-tie=true;
-}
-
-});
-
-setTimeout(()=>{
-
-if(tie){
-alert("Égalité ! Plusieurs joueurs ont " + bestScore + " points !");
-}else{
-alert("🏆 Le gagnant est " + winner + " avec " + bestScore + " points !");
-}
-
-},200);
-
-}
 
 </script>
 
