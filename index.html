@@ -51,7 +51,7 @@ min-width:90px;
 }
 
 th{
-background:#3f51b5;
+background:#248231;
 color:white;
 }
 
@@ -68,6 +68,11 @@ font-weight:bold;
 background:#eee;
 font-weight:bold;
 cursor:default;
+}
+
+.diceRow td:first-child{
+font-size:36px;
+text-align:center;
 }
 
 </style>
@@ -229,9 +234,21 @@ body.innerHTML="";
 upperSection.forEach((combo,rowIndex)=>{
 
 let row=document.createElement("tr");
+row.classList.add("diceRow");
 
-let name=document.createElement("td");
-name.textContent=combo;
+let name = document.createElement("td");
+
+const diceIcons = {
+"As":"⚀",
+"Deux":"⚁",
+"Trois":"⚂",
+"Quatre":"⚃",
+"Cinq":"⚄",
+"Six":"⚅"
+};
+
+name.textContent = diceIcons[combo] || combo;
+
 row.appendChild(name);
 
 players.forEach((p,i)=>{
@@ -330,10 +347,21 @@ let cell=document.createElement("td");
 if(fixedScores[combo] !== undefined){
 
 cell.onclick = () => {
-  if(cell.dataset.played) return; // bloque si déjà joué
-  cell.textContent = fixedScores[combo];
-  cell.dataset.played = "true";  // <- marque la cellule comme jouée
-  cell.classList.add("used");
+
+  // si déjà joué → on annule
+  if(cell.dataset.played){
+    cell.textContent = "";
+    delete cell.dataset.played;
+    cell.classList.remove("used");
+  }
+
+  // sinon on applique le score
+  else{
+    cell.textContent = fixedScores[combo];
+    cell.dataset.played = "true";
+    cell.classList.add("used");
+  }
+
   updateTotals(i);
   checkGameEnd();
 };
@@ -492,7 +520,7 @@ function checkGameEnd() {
     if (tie) {
       alert("Égalité ! Plusieurs joueurs ont " + bestScore + " points !");
     } else {
-      alert("🏆 Le gagnant est " + winner + " avec " + bestScore + " points !");
+      alert("🏆 t'as démonté tout le monde " + winner + " avec " + bestScore + " puntos !");
     }
   }, 200);
 }
